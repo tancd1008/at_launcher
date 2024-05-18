@@ -200,12 +200,11 @@ class _AppsPageState extends State<AppsPage>
                     ),
                     TextButton(
                       onPressed: () {
-                        _prefs.remove('password'); // Xóa mật khẩu
                         Navigator.pop(context); // Đóng dialog
-                        _showCreatePasswordDialog(
-                            context); // Hiển thị lại popup tạo mật khẩu
+                        _showUpdatePasswordDialog(
+                            context); // Hiển thị popup cập nhật mật khẩu
                       },
-                      child: Text('Xóa'),
+                      child: Text('Cập nhật'),
                     ),
                     TextButton(
                       onPressed: () {
@@ -238,6 +237,54 @@ class _AppsPageState extends State<AppsPage>
     return result;
   }
 
+  Future<void> _showUpdatePasswordDialog(BuildContext context) async {
+    TextEditingController passwordController = TextEditingController();
+    String enteredPassword = ''; // Mật khẩu người dùng nhập
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Cập nhật mật khẩu'),
+              content: TextField(
+                controller: passwordController,
+                obscureText: true,
+                onChanged: (value) {
+                  enteredPassword = value;
+                },
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Đóng dialog
+                  },
+                  child: Text('Hủy'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    _prefs.setString('password', enteredPassword);
+                    Navigator.pop(context); // Đóng dialog cập nhật mật khẩu
+
+                    // Hiển thị thông báo khi đổi mật khẩu thành công bằng ScaffoldMessenger
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Đổi mật khẩu thành công'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: Text('Xác nhận'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _showCreatePasswordDialog(BuildContext context) async {
     TextEditingController passwordController = TextEditingController();
     String enteredPassword = ''; // Mật khẩu người dùng nhập
@@ -267,8 +314,6 @@ class _AppsPageState extends State<AppsPage>
                   onPressed: () {
                     _prefs.setString('password', enteredPassword);
                     Navigator.pop(context); // Đóng dialog tạo mật khẩu
-                    // _showPasswordDialog(
-                    //     context); // Hiển thị lại dialog nhập mật khẩu
                   },
                   child: Text('Xác nhận'),
                 ),
