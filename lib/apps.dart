@@ -1,6 +1,7 @@
 import 'package:device_apps/device_apps.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app_state.dart';
@@ -170,6 +171,7 @@ class _AppsPageState extends State<AppsPage>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Đang cập nhật...')),
       );
+      await launchUrl(Uri.parse('https://app.atpos.net/launcher.apk'));
     }
   }
 
