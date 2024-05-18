@@ -54,6 +54,14 @@ class _AppsPageState extends State<AppsPage>
                 IconThemeData(color: Theme.of(context).colorScheme.primary),
             backgroundColor: Colors.transparent,
             actions: [
+              if (!(mode == DisplayMode.Grid))
+                IconButton(
+                  icon: Icon(Icons.download),
+                  onPressed: () {
+                    _showUpdateDialog(context);
+                  },
+                  iconSize: 40,
+                ),
               IconButton(
                 icon:
                     Icon(mode == DisplayMode.Grid ? Icons.list : Icons.grid_on),
@@ -83,7 +91,7 @@ class _AppsPageState extends State<AppsPage>
                   }
                 },
                 iconSize: 40,
-              )
+              ),
             ],
           ),
           body: appsInfo.when(
@@ -130,6 +138,40 @@ class _AppsPageState extends State<AppsPage>
 
   @override
   bool get wantKeepAlive => true;
+
+  Future<void> _showUpdateDialog(BuildContext context) async {
+    bool result = await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text('Cập nhật'),
+              content: Text('Bạn có muốn cập nhật?'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context, false);
+                  },
+                  child: Text('Hủy'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context, true);
+                  },
+                  child: Text('Cập nhật'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (result) {
+      // Thực hiện hành động cập nhật ở đây
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đang cập nhật...')),
+      );
+    }
+  }
 
   Future<bool> _showPasswordDialog(BuildContext context) async {
     TextEditingController passwordController = TextEditingController();
