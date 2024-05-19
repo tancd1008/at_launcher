@@ -1,8 +1,8 @@
 import 'package:device_apps/device_apps.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'app_state.dart';
 
@@ -27,6 +27,7 @@ enum DisplayMode {
 class _AppsPageState extends State<AppsPage>
     with AutomaticKeepAliveClientMixin {
   late SharedPreferences _prefs;
+  bool _isPasswordVerified = false; // Add this flag
 
   @override
   void initState() {
@@ -68,26 +69,19 @@ class _AppsPageState extends State<AppsPage>
                     Icon(mode == DisplayMode.Grid ? Icons.list : Icons.grid_on),
                 onPressed: () async {
                   bool hasPassword = _prefs.containsKey('password');
-                  if (hasPassword) {
+                  if (_isPasswordVerified || !hasPassword) {
+                    ref.read(modeProvider.notifier).update((state) =>
+                        state == DisplayMode.Grid
+                            ? DisplayMode.List
+                            : DisplayMode.Grid);
+                  } else {
                     bool result = await _showPasswordDialog(context);
                     if (result) {
+                      _isPasswordVerified = true; // Set the flag to true
                       ref.read(modeProvider.notifier).update((state) =>
                           state == DisplayMode.Grid
                               ? DisplayMode.List
                               : DisplayMode.Grid);
-                    }
-                  } else {
-                    await _showCreatePasswordDialog(context);
-                    bool hasPasswordAfterCreation =
-                        _prefs.containsKey('password');
-                    if (hasPasswordAfterCreation) {
-                      bool result = await _showPasswordDialog(context);
-                      if (result) {
-                        ref.read(modeProvider.notifier).update((state) =>
-                            state == DisplayMode.Grid
-                                ? DisplayMode.List
-                                : DisplayMode.Grid);
-                      }
                     }
                   }
                 },
@@ -240,8 +234,12 @@ class _AppsPageState extends State<AppsPage>
   }
 
   Future<void> _showUpdatePasswordDialog(BuildContext context) async {
-    TextEditingController passwordController = TextEditingController();
-    String enteredPassword = ''; // Mật khẩu người dùng nhập
+    TextEditingController currentPasswordController = TextEditingController();
+    TextEditingController newPasswordController = TextEditingController();
+    TextEditingController confirmPasswordController = TextEditingController();
+    String currentPassword = '';
+    String newPassword = '';
+    String confirmPassword = '';
 
     await showDialog(
       context: context,
@@ -250,12 +248,35 @@ class _AppsPageState extends State<AppsPage>
           builder: (context, setState) {
             return AlertDialog(
               title: Text('Cập nhật mật khẩu'),
-              content: TextField(
-                controller: passwordController,
-                obscureText: true,
-                onChanged: (value) {
-                  enteredPassword = value;
-                },
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: currentPasswordController,
+                    obscureText: true,
+                    decoration: InputDecoration(labelText: 'Mật khẩu hiện tại'),
+                    onChanged: (value) {
+                      currentPassword = value;
+                    },
+                  ),
+                  TextField(
+                    controller: newPasswordController,
+                    obscureText: true,
+                    decoration: InputDecoration(labelText: 'Mật khẩu mới'),
+                    onChanged: (value) {
+                      newPassword = value;
+                    },
+                  ),
+                  TextField(
+                    controller: confirmPasswordController,
+                    obscureText: true,
+                    decoration:
+                        InputDecoration(labelText: 'Xác nhận mật khẩu mới'),
+                    onChanged: (value) {
+                      confirmPassword = value;
+                    },
+                  ),
+                ],
               ),
               actions: [
                 TextButton(
@@ -266,16 +287,36 @@ class _AppsPageState extends State<AppsPage>
                 ),
                 TextButton(
                   onPressed: () async {
-                    _prefs.setString('password', enteredPassword);
-                    Navigator.pop(context); // Đóng dialog cập nhật mật khẩu
+                    String storedPassword = _prefs.getString('password') ?? '';
+                    if (currentPassword == storedPassword) {
+                      if (newPassword == confirmPassword) {
+                        _prefs.setString('password', newPassword);
+                        Navigator.pop(context); // Đóng dialog cập nhật mật khẩu
 
-                    // Hiển thị thông báo khi đổi mật khẩu thành công bằng ScaffoldMessenger
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Đổi mật khẩu thành công'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
+                        // Hiển thị thông báo khi đổi mật khẩu thành công bằng ScaffoldMessenger
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Đổi mật khẩu thành công'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      } else {
+                        // Mật khẩu mới và xác nhận không khớp
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content:
+                                Text('Mật khẩu mới và xác nhận không khớp'),
+                          ),
+                        );
+                      }
+                    } else {
+                      // Mật khẩu hiện tại không đúng
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Mật khẩu hiện tại không đúng'),
+                        ),
+                      );
+                    }
                   },
                   child: Text('Xác nhận'),
                 ),
