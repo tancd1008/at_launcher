@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
 
 import 'app_state.dart';
 
 final modeProvider = StateProvider<DisplayMode>((ref) => DisplayMode.Grid);
 final packageNames = [
   'com.example.project_01',
-  'com.appwhoosh.vietktvremote',
+  'com.evideo_generic_duochang_app.vietnam',
   'com.atvn_customer',
 ];
 
@@ -27,7 +28,6 @@ enum DisplayMode {
 class _AppsPageState extends State<AppsPage>
     with AutomaticKeepAliveClientMixin {
   late SharedPreferences _prefs;
-  bool _isPasswordVerified = false; // Add this flag
 
   @override
   void initState() {
@@ -57,6 +57,13 @@ class _AppsPageState extends State<AppsPage>
             backgroundColor: Colors.transparent,
             actions: [
               if (!(mode == DisplayMode.Grid))
+                TextButton(
+                  onPressed: () {
+                    _showUpdatePasswordDialog(context);
+                  },
+                  child: Text('Đổi mật khẩu'),
+                ),
+              if (!(mode == DisplayMode.Grid))
                 IconButton(
                   icon: Icon(Icons.download),
                   onPressed: () {
@@ -65,23 +72,39 @@ class _AppsPageState extends State<AppsPage>
                   iconSize: 40,
                 ),
               IconButton(
-                icon:
-                    Icon(mode == DisplayMode.Grid ? Icons.list : Icons.grid_on),
+                icon: Icon(
+                  mode == DisplayMode.Grid ? Icons.list : Icons.home,
+                ),
                 onPressed: () async {
                   bool hasPassword = _prefs.containsKey('password');
-                  if (_isPasswordVerified || !hasPassword) {
-                    ref.read(modeProvider.notifier).update((state) =>
-                        state == DisplayMode.Grid
-                            ? DisplayMode.List
-                            : DisplayMode.Grid);
+                  if (hasPassword) {
+                    if (mode == DisplayMode.Grid) {
+                      bool hasPassword = _prefs.containsKey('password');
+                      bool result = await _showPasswordDialog(context);
+                      if (result) {
+                        ref.read(modeProvider.notifier).update(
+                              (state) => state == DisplayMode.Grid
+                                  ? DisplayMode.List
+                                  : DisplayMode.Grid,
+                            );
+                      }
+                    } else {
+                      ref
+                          .read(modeProvider.notifier)
+                          .update((state) => DisplayMode.Grid);
+                    }
                   } else {
-                    bool result = await _showPasswordDialog(context);
-                    if (result) {
-                      _isPasswordVerified = true; // Set the flag to true
-                      ref.read(modeProvider.notifier).update((state) =>
-                          state == DisplayMode.Grid
-                              ? DisplayMode.List
-                              : DisplayMode.Grid);
+                    await _showCreatePasswordDialog(context);
+                    bool hasPasswordAfterCreation =
+                        _prefs.containsKey('password');
+                    if (hasPasswordAfterCreation) {
+                      bool result = await _showPasswordDialog(context);
+                      if (result) {
+                        ref.read(modeProvider.notifier).update((state) =>
+                            state == DisplayMode.Grid
+                                ? DisplayMode.List
+                                : DisplayMode.Grid);
+                      }
                     }
                   }
                 },
@@ -183,6 +206,8 @@ class _AppsPageState extends State<AppsPage>
                   content: TextField(
                     controller: passwordController,
                     obscureText: true,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     onChanged: (value) {
                       enteredPassword = value;
                     },
@@ -193,14 +218,6 @@ class _AppsPageState extends State<AppsPage>
                         Navigator.pop(context, false); // Trả về false khi hủy
                       },
                       child: Text('Hủy'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context); // Đóng dialog
-                        _showUpdatePasswordDialog(
-                            context); // Hiển thị popup cập nhật mật khẩu
-                      },
-                      child: Text('Cập nhật'),
                     ),
                     TextButton(
                       onPressed: () {
@@ -254,6 +271,8 @@ class _AppsPageState extends State<AppsPage>
                   TextField(
                     controller: currentPasswordController,
                     obscureText: true,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: InputDecoration(labelText: 'Mật khẩu hiện tại'),
                     onChanged: (value) {
                       currentPassword = value;
@@ -342,6 +361,8 @@ class _AppsPageState extends State<AppsPage>
               content: TextField(
                 controller: passwordController,
                 obscureText: true,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 onChanged: (value) {
                   enteredPassword = value;
                 },
